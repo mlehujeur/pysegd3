@@ -3,7 +3,7 @@ import setuptools
 
 setuptools.setup(
     name='pysegd3',
-    version="1.0.0",
+    version="1.0.1",
     license='GPL3',
     author="Maximilien Lehujeur",
     author_email="maximilien.lehujeur@univ-eiffel.fr",
