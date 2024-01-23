@@ -468,7 +468,7 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
                             time_drift_header['time_of_deployment'] = segd_timestamp(trace_header_buffer[:8])
                             time_drift_header['time_of_retrieval'] = segd_timestamp(trace_header_buffer[8:16])
                             time_drift_header['time_offset_at_deployment_microsec'] = int.from_bytes(trace_header_buffer[16:20], byteorder="big", signed=True)
-                            time_drift_header['time_offset_at_deployment_microsec'] = int.from_bytes(trace_header_buffer[20:24], byteorder="big", signed=True)
+                            time_drift_header['time_offset_at_retrieval_microsec'] = int.from_bytes(trace_header_buffer[20:24], byteorder="big", signed=True)
                             time_drift_header['time_drift_corrected'] = int.from_bytes(trace_header_buffer[24:25], byteorder="big", signed=False)
                             time_drift_header['time_drift_correction_method'] = {
                                 0x00: "Uncorrected",
