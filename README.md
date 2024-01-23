@@ -18,7 +18,7 @@ for (trace_header, trace_data) in read_segd_rev3(segdfilename):
 
 ### Load as an obspy stream
 Obspy is not included in this package
-```python
+```bash
 pip install obspy
 ```
 
