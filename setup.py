@@ -1,6 +1,9 @@
 import os
 import setuptools
 
+with open('README.md', 'r', encoding="utf-8") as fid:
+    long_description = fid.read()
+
 setuptools.setup(
     name='pysegd3',
     version="1.0.1",
@@ -8,8 +11,8 @@ setuptools.setup(
     author="Maximilien Lehujeur",
     author_email="maximilien.lehujeur@univ-eiffel.fr",
     decription='Standalone package to read/write segd rev3 files in python',
-    long_description='Standalone package to read/write segd rev3 files in python',
-    long_description_content_type='text/x-rst',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     packages=setuptools.find_packages(),
     install_requires=['numpy', 'pytest', 'matplotlib'],
     python_requires=">=3.7",  

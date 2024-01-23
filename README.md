@@ -3,8 +3,16 @@
 Standalone package to read/write segd rev3 files in python
 
 ## Install 
+### From Pypi
+```bash
+pip install pysegd3
+``` 
 
-`pip install pysegd3` 
+### Form Github (sources)
+```bash 
+git clone https://github.com/mlehujeur/pysegd3.git
+python -m pip install -e pysegd3 
+```
 
 ## Usages
 ### Load a segd rev 3 file
