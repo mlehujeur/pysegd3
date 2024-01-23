@@ -9,7 +9,7 @@ setuptools.setup(
     author_email="maximilien.lehujeur@univ-eiffel.fr",
     decription='Standalone package to read/write segd rev3 files in python',
     packages=setuptools.find_packages(),
-    install_requires=['numpy', 'pytest', 'scipy'],
+    install_requires=['numpy', 'pytest', 'matplotlib'],
     python_requires=">=3.2",  # because of datetime.timezone
     classifiers=[
         "Programming Language :: Python :: 3",
