@@ -49,7 +49,7 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
         # segd revision number
         segd_revision = float(
             f"{general_header_block2[10:11].hex()}.{general_header_block2[11:12].hex()}")
-        assert segd_revision == 3.0, segd_revision
+        assert segd_revision >= 3.0, segd_revision
 
         # additionnal blocks of the general header
         # right 4 bits of byte 11, usigned int
@@ -212,12 +212,12 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
                 # number of channels in this channel set
                 scan_type_headers[scan_type_number][channel_set_number]\
                     ["number_of_channels"] = \
-                    int.from_bytes(channel_set_descriptor[20:23],
+                        int.from_bytes(channel_set_descriptor[20:23],
                                    byteorder="big", signed=False)
                 # ==
                 scan_type_headers[scan_type_number][channel_set_number]\
                     ["sampling_interval_microsec"] = \
-                    int.from_bytes(channel_set_descriptor[23:26],
+                        int.from_bytes(channel_set_descriptor[23:26],
                                    byteorder="big", signed=False)
 
                 # ==
