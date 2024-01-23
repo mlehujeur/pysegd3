@@ -6,7 +6,7 @@ Basic reader for SEGD rev 3.0
 ML 16/11/2022
 """
 
-
+from typing import List
 import sys
 import numpy as np
 import datetime
@@ -17,7 +17,7 @@ GPS_EPOCH = datetime.datetime(
     1980, 1, 6, tzinfo=datetime.timezone.utc)
 
 
-def segd_timestamp(bytes_in: bytes):
+def segd_timestamp(bytes_in: bytes) -> datetime.datetime:
     """
     A SEG-D Rev 3.0 timestamp is an 8 byte, signed, big-endian integer counting the number of microseconds since
     6 Jan 1980 00:00:00 (GPS epoch). The timestamp is equal to GPS time converted to microseconds.
@@ -30,7 +30,15 @@ def segd_timestamp(bytes_in: bytes):
     return utc_datetime
 
 
-def read_segd_rev3_0(segdfilename: str):
+def read_segd_rev3(segdfilename: str, verbose: bool=False) -> List[Tuple[Dict[str, Any], np.ndarray]]:
+    """
+    Read segd rev3 file in python
+    :param segdfilename: name of the segd file to read in
+    :param verbose: ..
+    :return traces: a list containing one tuple per trace in the file
+        each tuple includes a dictionnary formatted like the "stats" attribute of obspy.core.trace.Trace objects
+        and a numpy array
+    """
     traces = []
 
     with open(segdfilename, 'rb') as fid:
@@ -53,12 +61,14 @@ def read_segd_rev3_0(segdfilename: str):
             number_of_additional_blocks_in_general_header = \
                 int.from_bytes(general_header_block2[22:24], byteorder="big", signed=False)
 
-        print(f"number_of_additional_blocks_in_general_header: {number_of_additional_blocks_in_general_header}")
+        if verbose:
+            print(f"{number_of_additional_blocks_in_general_header=}")
         general_header_remaining_blocks = fid.read(32 * (number_of_additional_blocks_in_general_header - 2))
 
         # number of scan types per record
         n_scan_type_per_record = int(general_header_block1[27:28].hex())
-        print(f"n_scan_type_per_record: {n_scan_type_per_record}")
+        if verbose:
+            print(f"{n_scan_type_per_record=}")
 
         # number of channel sets per scan type
         h = general_header_block1[28:29].hex()
@@ -67,7 +77,8 @@ def read_segd_rev3_0(segdfilename: str):
             n_channel_sets_per_scan_type = h
         else:
             n_channel_sets_per_scan_type = int(h)
-        print(f"n_channel_sets_per_scan_type: {n_channel_sets_per_scan_type}")
+        if verbose:
+            print(f"{n_channel_sets_per_scan_type=}")
 
         # number of 32 bytes extensions after each scan type header block
         h = general_header_block1[29:30].hex()
@@ -76,17 +87,20 @@ def read_segd_rev3_0(segdfilename: str):
             skew_extension_length = h * 32
         else:
             skew_extension_length = int(h) * 32
-        print(f"skew_extension_length: {skew_extension_length}")
+        if verbose:
+            print(f"{skew_extension_length=}")
 
         # extended recording mode
         extended_recording_mode = \
             int.from_bytes(general_header_block3[29:30], byteorder="big", signed=False)
-        print(f"extended_recording_mode: {extended_recording_mode}")
+        if verbose:
+            print(f"{extended_recording_mode=}")
 
         # relative time mode
         relative_time_mode = \
             int.from_bytes(general_header_block3[29:30], byteorder="big", signed=False)
-        print(f"relative_time_mode: {relative_time_mode}")
+        if verbose:
+            print(f"{relative_time_mode=}")
         if relative_time_mode != 0:
             raise NotImplementedError('relative time mode not implemented')
 
@@ -132,7 +146,8 @@ def read_segd_rev3_0(segdfilename: str):
                                        byteorder="big", signed=False)
 
             sample_skew_header = fid.read(skew_extension_length)
-        print(scan_type_headers)
+        if verbose:
+            print(scan_type_headers)
 
         # ======================================
         # extended header
@@ -142,7 +157,8 @@ def read_segd_rev3_0(segdfilename: str):
             extended_header_length = h * 32
         else:
             extended_header_length = int(h) * 32
-        print(f"extended_header_length: {extended_header_length}")
+        if verbose:
+            print(f"{extended_header_length=}")
         fid.read(extended_header_length)
 
         # ======================================
@@ -153,19 +169,27 @@ def read_segd_rev3_0(segdfilename: str):
             external_header_length = h * 32
         else:
             external_header_length = int(h) * 32
-        print(f"external_header_length: {external_header_length}")
+        if verbose:
+            print(f"{external_header_length=}")
         fid.read(external_header_length)
 
         # ====================================== traces
         for scan_type_number, scan_type_header in scan_type_headers.items():
+            if verbose:
+                print(f"# ######### {scan_type_number=}")
             for channel_set_number, channel_set_descriptor in scan_type_header.items():
 
+                if verbose:
+                    print(f"# ========= {channel_set_number=}")
+                    
                 delta = channel_set_descriptor["sampling_interval_microsec"] * 1e-6
                 npts = channel_set_descriptor['number_of_samples']
 
                 for channel_number in range(channel_set_descriptor["number_of_channels"]):
                     # =========== trace header
-
+                    if verbose:
+                        print(f"# --------- {channel_number=}")
+            
                     # ========= demux trace header
                     demux_trace_header = fid.read(20)
                     first_timing_word = demux_trace_header[6:9]
@@ -182,15 +206,18 @@ def read_segd_rev3_0(segdfilename: str):
                     trace_header_extension1 = fid.read(32)
 
                     receiver_line_number = int.from_bytes(trace_header_extension1[0:3], byteorder="big", signed=True)
-                    # print(f"receiver_line_number={receiver_line_number}")
+                    if verbose:
+                        print(f"{receiver_line_number=}")
 
                     receiver_point_number = int.from_bytes(trace_header_extension1[3:6], byteorder="big", signed=True)
-                    # print(f"receiver_point_number={receiver_point_number}")
+                    if verbose:
+                        print(f"{receiver_point_number=}")
 
                     # number of samples in this trace => why not using the channel set descriptor?
                     number_of_samples = int.from_bytes(trace_header_extension1[24:28], byteorder="big", signed=False)
                     assert number_of_samples == channel_set_descriptor['number_of_samples']
-                    # print(f"number_of_samples={number_of_samples}")
+                    if verbose:
+                        print(f"{number_of_samples=}")
 
                     # remaining trace header extension blocks (extension 1 already read)
                     remaining_trace_header = fid.read((channel_set_descriptor["number_of_trace_header_extensions"]-1) * 32)
@@ -204,6 +231,7 @@ def read_segd_rev3_0(segdfilename: str):
 
                         starttime = time_zero.timestamp()
 
+                    # header like obsy but without obspy imported please !!!
                     trace_header = {
                         "starttime": starttime,  # float
                         "npts": npts,   # int
@@ -227,7 +255,7 @@ def read_segd_rev3_0(segdfilename: str):
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    traces = read_segd_rev3_0(sys.argv[1])
+    traces = read_segd_rev3(sys.argv[1], verbose=True)
 
     for n, (trace_header, trace_data) in enumerate(traces):
         t = np.arange(trace_header['npts']) * trace_header['delta']
