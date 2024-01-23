@@ -8,6 +8,8 @@ setuptools.setup(
     author="Maximilien Lehujeur",
     author_email="maximilien.lehujeur@univ-eiffel.fr",
     decription='Standalone package to read/write segd rev3 files in python',
+    long_description='Standalone package to read/write segd rev3 files in python',
+    long_description_content_type='text/x-rst',
     packages=setuptools.find_packages(),
     install_requires=['numpy', 'pytest', 'matplotlib'],
     python_requires=">=3.7",  
