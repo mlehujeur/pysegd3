@@ -10,7 +10,7 @@ setuptools.setup(
     decription='Standalone package to read/write segd rev3 files in python',
     packages=setuptools.find_packages(),
     install_requires=['numpy', 'pytest', 'matplotlib'],
-    python_requires=">=3.2",  # because of datetime.timezone
+    python_requires=">=3.7",  
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: POSIX :: Linux",
