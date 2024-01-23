@@ -17,6 +17,7 @@ setuptools.setup(
         "Operating System :: Microsoft :: Windows",
         ],
     scripts=[
-        os.path.join('pysegd3', 'readsegd30.py'),
+        os.path.join('pysegd3', 'readsegd3.py'),
+        os.path.join('pysegd3', 'readsegd3_as_obspy.py'),
         ],
     )
