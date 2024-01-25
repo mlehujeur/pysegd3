@@ -11,10 +11,110 @@ import numpy as np
 import datetime
 
 
+# ========================== GLOBAL VARIABLES
+CHANNEL_TYPE_IDENTIFICATIONS: Dict[int, str] = {
+    0x00: "Unused",
+    0x10: "Seis",
+    0x11: "Electromagnetic",
+    0x20: "Time break",
+    0x21: "Clock timebreak",
+    0x22: "Field timebreak",
+    0x30: "Up hole",
+    0x40: "blablabla",
+    0x50: "blablabla",
+    0x60: "blablabla",
+    0x61: "blablabla",
+    0x62: "blablabla",
+    0x63: "blablabla",
+    0x70: "blablabla",
+    0x80: "blablabla",
+    0x90: "blablabla",
+    0x91: "blablabla",
+    0x92: "blablabla",
+    0x93: "blablabla",
+    0x94: "blablabla",
+    0x95: "blablabla",
+    0x96: "blablabla",
+    0x97: "blablabla",
+    0x98: "blablabla",
+    0x99: "blablabla",
+    0x9A: "blablabla",
+    0x9B: "blablabla",
+    0x9C: "blablabla",
+    0xA0: "blablabla",
+    0xB0: "blablabla",
+    0xB1: "blablabla",
+    0xB2: "blablabla",
+    0xB3: "blablabla",
+    0xC0: "blablabla",
+    0xC1: "blablabla",
+    0xC2: "blablabla",
+    0xC3: "blablabla",
+    0xC4: "blablabla",
+    0xC5: "blablabla",
+    0xC6: "blablabla",
+    0xC7: "blablabla",
+    0xC8: "blablabla",
+    0xC9: "blablabla",
+    0xF0: "blablabla",
+        }
+
+SENSOR_TYPES: Dict[bytearray, str] = {
+    b'\x00': "not defined",
+    b'\x01': "hydrophone",
+    b'\x02': "geophone vertical",
+    b'\x03': "geophone horizontal inline",
+    b'\x04': "geophone horizontal crossline",
+    b'\x05': "geophone horizontal other",
+    b'\x06': "accelerometer vertical",
+    b'\x07': "accelerometer horizontal inline",
+    b'\x08': "accelerometer horizontal crossline",
+    b'\x09': "accelerometer horizontal other",
+    b'\x15': "electric dipole",
+    b'\x16': "magnetic coil",
+    }
+
+# see segd doc p 39
+HEADER_BLOCK_TYPES: Dict[int, str] = {
+    0x02: "General Header 2",
+    0x03: "General Header 3",
+    0x10: "Vessel/Crew identification",
+    0x11: "Survey Area Name",
+    0x12: "Client Name",
+    0x13: "Job Identification",
+    0x14: "Line Identification",
+    0x15: "Vibrator Source Information",
+    0x16: "Explosive Source Information",
+    0x17: "Airgun Source Information",
+    0x18: "Watergun Source Information",
+    0x19: "Electromagnetic Source",
+    0x1f: "Other Source Type Information",
+    0x20: "Additional Source Information",
+    0x21: "Source Auxiliary Channel Reference",
+    0x30: "Channel Set Description Block 1",
+    0x31: "Channel Set Description Block 2",
+    0x32: "Channel Set Description Block 3",
+    0x40: "Trace Header Extension 1",
+    0x41: "Sensor Info Header Extension Block",
+    0x42: "Time Stamp Header Block",
+    0x43: "Sensor Calibration Block",
+    0x44: "Time Drift Block",
+    0x45: "Electromagnetic Src/Recv Desc Block",
+    0x50: "Position Block 1",
+    0x51: "Position Block 2",
+    0x52: "Position Block 3",
+    0x55: "Coordinate Reference System Identification Block",
+    0x56: "Relative Position Block",
+    0x60: "Orientation Header Block",
+    0x61: "Measurement Block",
+    0x70: "General Trailer Description Block",
+    # 0xb0 -> 0xff : "user defined header block"
+    }
+
+# ==========================
 # GPS EPOCH expressed in UTC datetime
 GPS_EPOCH = datetime.datetime(
     1980, 1, 6, tzinfo=datetime.timezone.utc)
-
 
 def segd_timestamp(bytes_in: bytes) -> datetime.datetime:
     """
@@ -27,6 +127,31 @@ def segd_timestamp(bytes_in: bytes) -> datetime.datetime:
         GPS_EPOCH + \
         datetime.timedelta(seconds=gps_microseconds / 1e6)
     return utc_datetime
+
+def _unpack_time_drift_header(trace_header_buffer: bytes) -> Dict[str, Any]:
+    """
+    according to segd rev 3 documentation, the time drift header should be stored in
+    trace header block 0x44
+
+    :param trace_header_buffer:
+    :return time_drift_header:
+    """
+
+    time_drift_header = {}
+    time_drift_header['time_of_deployment'] = segd_timestamp(trace_header_buffer[:8])
+    time_drift_header['time_of_retrieval'] = segd_timestamp(trace_header_buffer[8:16])
+    time_drift_header['time_offset_at_deployment_microsec'] = int.from_bytes(trace_header_buffer[16:20],
+                                                                             byteorder="big", signed=True)
+    time_drift_header['time_offset_at_retrieval_microsec'] = int.from_bytes(trace_header_buffer[20:24], byteorder="big",
+                                                                            signed=True)
+    time_drift_header['time_drift_corrected'] = int.from_bytes(trace_header_buffer[24:25], byteorder="big",
+                                                               signed=False)
+    time_drift_header['time_drift_correction_method'] = {
+        0x00: "Uncorrected",
+        0x01: "Linear Correction",  # (values in this header used)
+        0xff: "Other, manufacturer defined method used for correction"
+    }[int.from_bytes(trace_header_buffer[25:26], byteorder="big", signed=False)]
+    return time_drift_header
 
 
 def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)\
@@ -135,52 +260,7 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
 
                 # ==
                 scan_type_headers[scan_type_number][channel_set_number] \
-                    ["channel_type_identification"] = {
-                        0x00: "Unused",
-                        0x10: "Seis",
-                        0x11: "Electromagnetic",
-                        0x20: "Time break",
-                        0x21: "Clock timebreak",
-                        0x22: "Field timebreak",
-                        0x30: "Up hole",
-                        0x40: "blablabla",
-                        0x50: "blablabla",
-                        0x60: "blablabla",
-                        0x61: "blablabla",
-                        0x62: "blablabla",
-                        0x63: "blablabla",
-                        0x70: "blablabla",
-                        0x80: "blablabla",
-                        0x90: "blablabla",
-                        0x91: "blablabla",
-                        0x92: "blablabla",
-                        0x93: "blablabla",
-                        0x94: "blablabla",
-                        0x95: "blablabla",
-                        0x96: "blablabla",
-                        0x97: "blablabla",
-                        0x98: "blablabla",
-                        0x99: "blablabla",
-                        0x9A: "blablabla",
-                        0x9B: "blablabla",
-                        0x9C: "blablabla",
-                        0xA0: "blablabla",
-                        0xB0: "blablabla",
-                        0xB1: "blablabla",
-                        0xB2: "blablabla",
-                        0xB3: "blablabla",
-                        0xC0: "blablabla",
-                        0xC1: "blablabla",
-                        0xC2: "blablabla",
-                        0xC3: "blablabla",
-                        0xC4: "blablabla",
-                        0xC5: "blablabla",
-                        0xC6: "blablabla",
-                        0xC7: "blablabla",
-                        0xC8: "blablabla",
-                        0xC9: "blablabla",
-                        0xF0: "blablabla",
-                        }[int.from_bytes(channel_set_descriptor[3:4], byteorder="big", signed=False)]
+                    ["channel_type_identification"] = CHANNEL_TYPE_IDENTIFICATIONS[int.from_bytes(channel_set_descriptor[3:4], byteorder="big", signed=False)]
 
                 # ==
                 scan_type_headers[scan_type_number][channel_set_number] \
@@ -387,20 +467,7 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
                     # depth_index
                     # extended_receiver_line_number
                     # extended_receiver_point
-                    sensor_type = {
-                        b'\x00': "not defined",
-                        b'\x01': "hydrophone",
-                        b'\x02': "geophone vertical",
-                        b'\x03': "geophone horizontal inline",
-                        b'\x04': "geophone horizontal crossline",
-                        b'\x05': "geophone horizontal other",
-                        b'\x06': "accelerometer vertical",
-                        b'\x07': "accelerometer horizontal inline",
-                        b'\x08': "accelerometer horizontal crossline",
-                        b'\x09': "accelerometer horizontal other",
-                        b'\x15': "electric dipole",
-                        b'\x16': "magnetic coil",
-                        }[trace_header_extension1[20:21]]
+                    sensor_type = SENSOR_TYPES[trace_header_extension1[20:21]]
                     if verbose:
                         print(f'{sensor_type=}')
 
@@ -422,7 +489,7 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
                     header_block_type = int.from_bytes(trace_header_extension1[31:32], byteorder="big", signed=False)
                     assert header_block_type == 0x40  # i.e. 64
                     if verbose:
-                        print(f"{header_block_type=}")
+                        print(f"{header_block_type=}, {HEADER_BLOCK_TYPES[header_block_type]=}")
 
                     # ========= optionnal blocks (see section 5.0 header blocks)
                     # remaining trace header extension blocks (extension 1 already read)
@@ -438,7 +505,14 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
 
                         # 0 = trace_header_extension1
                         trace_header_buffer = fid.read(32)
-                        trace_header_block_type = int.from_bytes(trace_header_buffer[31:32], byteorder="big", signed=False)
+                        trace_header_block_type = \
+                            int.from_bytes(
+                                trace_header_buffer[31:32], 
+                                byteorder="big", 
+                                signed=False)
+
+                        if verbose:
+                            print(f"trace_header_block_type=0x{hex(trace_header_block_type)=}")
 
                         if trace_header_block_type == 0x40:
                             raise ValueError('optional trace header was of type 0x40 (trace header extension #1)')
@@ -465,16 +539,9 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
 
                         elif trace_header_block_type == 0x44:
                             # trace_header_buffer
-                            time_drift_header['time_of_deployment'] = segd_timestamp(trace_header_buffer[:8])
-                            time_drift_header['time_of_retrieval'] = segd_timestamp(trace_header_buffer[8:16])
-                            time_drift_header['time_offset_at_deployment_microsec'] = int.from_bytes(trace_header_buffer[16:20], byteorder="big", signed=True)
-                            time_drift_header['time_offset_at_retrieval_microsec'] = int.from_bytes(trace_header_buffer[20:24], byteorder="big", signed=True)
-                            time_drift_header['time_drift_corrected'] = int.from_bytes(trace_header_buffer[24:25], byteorder="big", signed=False)
-                            time_drift_header['time_drift_correction_method'] = {
-                                0x00: "Uncorrected",
-                                0x01: "Linear Correction",  # (values in this header used)
-                                0xff: "Other, manufacturer defined method used for correction"
-                                }[int.from_bytes(trace_header_buffer[25:26], byteorder="big", signed=False)]
+                            time_drift_header = _unpack_time_drift_header(trace_header_buffer)
+                            if verbose:
+                                print(f"{time_drift_header=}")
 
                         elif 0x50 <= trace_header_block_type <= 0x52:
                             #position block 1-2-3
@@ -482,23 +549,37 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
 
                         elif trace_header_block_type == 0x60:
                             # trace_header_buffer
-                            # orientation_header[''] =
+                            orientation_header['rot_angle_around_X_rad'] = np.frombuffer(trace_header_buffer[:4], dtype=">f4")
                             # orientation_header[''] =
                             # orientation_header[''] =
                             pass
 
                         elif trace_header_block_type == 0x61:
                             # trace_header_buffer
-                            # measurement_block_header[''] =
+                            # measurement_block_header['
                             # measurement_block_header[''] =
                             # measurement_block_header[''] =
                             pass
 
                         elif 0xb0 <= trace_header_block_type <= 0xff:
                             # user defined header block
-                            pass
+                            if verbose:
+                                print(f'User defined trace header block detected '
+                                      f'(code {hex(trace_header_block_type)})')
 
+                            # if trace_header_block_type in [0xb8, 0xb9, 0xbe, 0xbf]: #0xb8:
+                            #     print(trace_header_buffer)
+                            #     # xb8 = b'                               \xb8'
+                            #     # xb9 = b'\x07\x01\x02\x01\x00\x00\x00\x1d1\x85\x00\x07\x01\x00\x1d1\x85\x00\x00\x01R\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\xb9'
+                            #     # xbe = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\xbe'
+                            #     # xbf = b'\x00\x04\xe5\xac\xd5\x0e\xdf\xa0\xc0%m\xe1\xbbau;<\xc6UP\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xbf'
+                            #     for i in range(32):
+                            #         try:
+                            #             print("azerty", hex(trace_header_block_type), i, segd_timestamp(trace_header_buffer[i:i+8]))
+                            #         except:
+                            #             pass
                         else:
+
                             raise NotImplementedError(trace_header_block_type, hex(trace_header_block_type))
                             # ... TODO
                             pass
@@ -541,6 +622,15 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
                             "orientation_header": orientation_header,
                             "measurement_block_header": measurement_block_header,
                             }}
+                    if verbose:
+                        def print_nested_dict(dct, indent=0):
+                            for key, val in dct.items():
+                                if isinstance(val, dict):
+                                    print(" " * indent, key)
+                                    print_nested_dict(val, indent + 4)
+                                else:
+                                    print(" " * indent, key, val)
+                        print_nested_dict(trace_header)
 
                     # data type assumed to be >f4...
                     buff = fid.read(channel_set_descriptor["number_of_samples"] * 4)
@@ -555,20 +645,22 @@ def read_segd_rev3(segdfilename: str, verbose: bool=False, headonly: bool=False)
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    from matplotlib.collections import LineCollection
+
     traces = read_segd_rev3(sys.argv[1], verbose=True)
 
-    segments: List[np.ndarray] = []
-    
-    for n, (trace_header, trace_data) in enumerate(traces):
-        t = np.arange(trace_header['npts']) * trace_header['delta']
-        d = trace_data
-        d = 0.1 * d / np.std(d) + n  # for display
-        segments.append(np.column_stack((t, d)))
-        
-    lc = LineCollection(segments, color="k", alpha=0.3)
-    plt.gca().add_collection(lc)
-    plt.gca().set_xlim((t.min(), t.max()))
-    plt.gca().set_ylim((-1, n+1))    
-    plt.show()
+    if "--show" in sys.argv[1:]:
+        from matplotlib.collections import LineCollection
+        segments: List[np.ndarray] = []
+
+        for n, (trace_header, trace_data) in enumerate(traces):
+            t = np.arange(trace_header['npts']) * trace_header['delta']
+            d = trace_data
+            d = 0.1 * d / np.std(d) + n  # for display
+            segments.append(np.column_stack((t, d)))
+
+        lc = LineCollection(segments, color="k", alpha=0.3)
+        plt.gca().add_collection(lc)
+        plt.gca().set_xlim((t.min(), t.max()))
+        plt.gca().set_ylim((-1, n+1))
+        plt.show()
 
