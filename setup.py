@@ -6,7 +6,7 @@ with open('README.md', 'r', encoding="utf-8") as fid:
 
 setuptools.setup(
     name='pysegd3',
-    version="1.0.2",
+    version="1.1.0",
     license='GPL3',
     author="Maximilien Lehujeur",
     author_email="maximilien.lehujeur@univ-eiffel.fr",
