@@ -9,6 +9,7 @@ from typing import List, Tuple, Dict, Any
 import sys
 import numpy as np
 import datetime
+from tempoo.gps import cumulative_leap_seconds
 
 
 # ========================== GLOBAL VARIABLES
@@ -120,12 +121,21 @@ def segd_timestamp(bytes_in: bytes) -> datetime.datetime:
     """
     A SEG-D Rev 3.0 timestamp is an 8 byte, signed, big-endian integer counting the number of microseconds since
     6 Jan 1980 00:00:00 (GPS epoch). The timestamp is equal to GPS time converted to microseconds.
+    
+    This function reads a number of microseconds since GPS_EPOCH
+    And returns a datetime expressed in the UTC time reference
+    The leap correction might not be implemented for dates older than 1980 or later than 2024/1/1
     """
     gps_microseconds = int.from_bytes(bytes_in, byteorder="big", signed=True)
+    uncorrected_timestamp = GPS_EPOCH.timestamp() + float(gps_microseconds) / 1e6
+    leap_correction_in_seconds = cumulative_leap_seconds(uncorrected_timestamp)
+   
+    gps_datetime = GPS_EPOCH + datetime.timedelta(seconds=gps_microseconds / 1e6)
+    utc_datetime = GPS_EPOCH + datetime.timedelta(seconds=gps_microseconds / 1e6 - leap_correction_in_seconds)
 
-    utc_datetime = \
-        GPS_EPOCH + \
-        datetime.timedelta(seconds=gps_microseconds / 1e6)
+    # print(f"{gps_datetime=} => {utc_datetime=}")
+    # in 2023 : the following assertion must be verified!!!
+    # assert utc_datetime.timestamp() + 18.0 == gps_datetime.timestamp()
     return utc_datetime
 
 def _unpack_time_drift_header(trace_header_buffer: bytes) -> Dict[str, Any]:

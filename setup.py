@@ -14,7 +14,10 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=setuptools.find_packages(),
-    install_requires=['numpy', 'pytest', 'matplotlib'],
+    install_requires=[
+        'numpy', 'pytest', 'matplotlib', 
+        'tempoo>=1.1.0',  # version required for gps 2 utc time conversions
+        ], 
     python_requires=">=3.7",  
     classifiers=[
         "Programming Language :: Python :: 3",
