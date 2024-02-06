@@ -25,9 +25,10 @@ def read_segd_rev3_as_obspy(filename: str, verbose: bool=False, headonly: bool=F
     if headonly:
         raise NotImplementedError  # TODO
         
-    trace_info_list = read_segd_rev3(filename, verbose=verbose, headonly=headonly)
+    general_header, trace_info_list = read_segd_rev3(filename, verbose=verbose, headonly=headonly)
     
     stream = Stream()
+    stream.stats = general_header
     for trace_header, trace_data in trace_info_list:
         trace = Trace(trace_data)  # < can we just put stats here? not sure in headonly mode
         trace_header['starttime'] = UTCDateTime(trace_header['starttime'])  # to obspy format
@@ -45,6 +46,7 @@ if __name__ == "__main__":
     stream = read_segd_rev3_as_obspy(
                 filename=sys.argv[1],
                 verbose=True, headonly=False)
+
     for trace in stream:
         print('# ----------------------------')
         print(trace)
