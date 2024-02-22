@@ -203,7 +203,7 @@ def read_segd_rev3(segdfilename: str, verbose: int=0, headonly: bool=False)\
             f"{general_header_block2[10:11].hex()}.{general_header_block2[11:12].hex()}")
         assert segd_revision >= 3.0, segd_revision
 
-        # additionnal blocks of the general header
+        # additional blocks of the general header
         # right 4 bits of byte 11, usigned int
         number_of_additional_blocks_in_general_header = \
             int.from_bytes(bytes([general_header_block1[11] >> 4]), byteorder="big", signed=False)
@@ -220,31 +220,31 @@ def read_segd_rev3(segdfilename: str, verbose: int=0, headonly: bool=False)\
         time_drift_header = {}
         reserved_time_drift_header = {}
         for nblock in range(number_of_additional_blocks_in_general_header - 2):
-            additionnal_header_block = fid.read(32)
-            additionnal_header_block_type = \
+            additional_header_block = fid.read(32)
+            additional_header_block_type = \
                 int.from_bytes(
-                    additionnal_header_block[31:32], 
+                    additional_header_block[31:32],
                     byteorder="big", 
                     signed=False)
             try:
-                header_block_name = HEADER_BLOCK_TYPES[additionnal_header_block_type]
+                header_block_name = HEADER_BLOCK_TYPES[additional_header_block_type]
                 
                 if verbose >= 2:
-                    print(f'additionnal general header block detected : '
-                          f'{hex(additionnal_header_block_type)}:'
+                    print(f'additional general header block detected : '
+                          f'{hex(additional_header_block_type)}:'
                           f'{header_block_name}')
                           
-                if additionnal_header_block_type == 0x44:
-                    time_drift_header = _unpack_time_drift_header(additionnal_header_block)
+                if additional_header_block_type == 0x44:
+                    time_drift_header = _unpack_time_drift_header(additional_header_block)
 
-                elif additionnal_header_block_type == 0xbd:
+                elif additional_header_block_type == 0xbd:
                     reserved_time_drift_header = {
                         "freq_err_rate_at_deployment": int.from_bytes(
-                            additionnal_header_block[16:20], 
+                            additional_header_block[16:20],
                             byteorder="big", 
                             signed=True),
                         "freq_err_rate_at_retrieval": int.from_bytes(
-                            additionnal_header_block[20:24], 
+                            additional_header_block[20:24],
                             byteorder="big", 
                             signed=True)}
                     
@@ -253,8 +253,8 @@ def read_segd_rev3(segdfilename: str, verbose: int=0, headonly: bool=False)\
                     
             except KeyError:
                 if verbose >= 2:
-                    print(f'additionnal general header block detected : '
-                          f'{hex(additionnal_header_block_type)}: '
+                    print(f'additional general header block detected : '
+                          f'{hex(additional_header_block_type)}: '
                           f'UNKNOWN HEADER TYPE')
 
         # number of scan types per record
@@ -730,7 +730,7 @@ def read_segd_rev3(segdfilename: str, verbose: int=0, headonly: bool=False)\
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    general_header, traces = read_segd_rev3(sys.argv[1], verbose=1)
+    general_header, traces = read_segd_rev3(sys.argv[1], verbose=2)
 
     if "--show" in sys.argv[1:]:
         from matplotlib.collections import LineCollection
