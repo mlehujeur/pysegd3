@@ -249,7 +249,7 @@ def read_segd_rev3(segdfilename: str, verbose: int=0, headonly: bool=False)\
                             signed=True)}
                     
                 elif verbose >= 2:
-                    print('not implemented')
+                    print(f'\t not implemented')
                     
             except KeyError:
                 if verbose >= 2:
@@ -434,7 +434,7 @@ def read_segd_rev3(segdfilename: str, verbose: int=0, headonly: bool=False)\
             sample_skew_header = fid.read(skew_extension_length)
 
         if verbose >= 2:
-            print(scan_type_headers)
+            print_nested_dict(scan_type_headers)
 
         # ======================================
         # extended header
