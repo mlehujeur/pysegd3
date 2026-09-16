@@ -119,6 +119,14 @@ HEADER_BLOCK_TYPES: Dict[int, str] = {
     0xd5: "Sercel Systemld Block4",                    
     }
 
+CHANNEL_GAIN_CONTROL_METHODS = {
+    1: "Individual_AGC",
+    2: "Ganged_AGC",
+    3: "Fixed_gain",
+    4: "Programmed_gain",
+    8: "Binary_gain_control",
+    9: "IFP_gain_control",
+    }
 
 def print_nested_dict(dct, indent=0):
     for key, val in dct.items():
@@ -370,7 +378,7 @@ def read_segd_rev3(segdfilename: str, verbose: int=0, headonly: bool=False)\
                 scan_type_headers[scan_type_number][channel_set_number] \
                     ["sample_descale_multiplication_factor"] = \
                         np.frombuffer(channel_set_descriptor[16:20],
-                                      dtype=np.float32)[0]
+                                      dtype=">f4")[0]  # dtype=np.float32)[0]
 
                 # ==
                 # number of channels in this channel set
@@ -411,7 +419,15 @@ def read_segd_rev3(segdfilename: str, verbose: int=0, headonly: bool=False)\
                         number_of_trace_header_extensions
 
                 # extended_header_flag
+                byte29 = channel_set_descriptor[28]
+                scan_type_headers[scan_type_number][channel_set_number] \
+                     ["extended_header_flag"] = (byte29 >> 4) & 0x0F
+
                 # channel gain control method
+                scan_type_headers[scan_type_number][channel_set_number] \
+                     ["channel_gain_control_method"] = \
+                         CHANNEL_GAIN_CONTROL_METHODS[byte29 & 0x0F]
+                
                 # vertical stack
                 # stream cable number
                 # header bloc type
@@ -603,8 +619,21 @@ def read_segd_rev3(segdfilename: str, verbose: int=0, headonly: bool=False)\
                             raise ValueError('optional trace header was of type 0x40 (trace header extension #1)')
 
                         elif trace_header_block_type == 0x41:
+                            # raise NotImplementedError('sensor_info_header_extension')
+                            sensor_info_header_extension['equipment_test_time'] = \
+                                segd_timestamp(trace_header_buffer[:8])
+
+                            # sensor_sensitivity = trace_header_buffer[8:12] # STY        
+                            sensor_info_header_extension['sensor_sensitivity'] = np.frombuffer(
+                                trace_header_buffer[8:12],
+                                dtype=">f4"
+                                )[0]
+                                
                             # sensor_info_header_extension[''] =
-                            # sensor_info_header_extension[''] =
+                            # equipment_test_result = trace_header_buffer[12:13] # ITR
+                            # serial_number = trace_header_buffer[13:32] # SN
+                            # header_block_type  = trace_header_buffer[32:33] # HT
+                            
                             pass
 
                         elif trace_header_block_type == 0x42:
